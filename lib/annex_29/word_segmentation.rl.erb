@@ -1,0 +1,190 @@
+<%
+  require("pathname")
+
+  property_regex = %r{
+    ^
+    (?<lower_bound>\h+)(?:\.\.(?<upper_bound>\h+))?
+    \s*
+    ;
+    \s*
+    (?<category>[^\#]+)
+  }x
+
+  general_category_regex = %r{
+    ^
+    (?<lower_bound>\h+)(?:\.\.(?<upper_bound>\h+))?
+    \s*
+    ;
+    \s*
+    (?:[^\#]+)
+    \#.
+    (?<category>[A-Z][a-z])
+  }x
+
+  parse_unicode_data = ->(file_name, regex = property_regex) do
+    data = Hash.new { |hash, key| hash[key] = [] }
+    File.open(Pathname.new("data").join(file_name)).each_line do |line|
+      next unless match = line.match(regex)
+      lower_bound = match["lower_bound".freeze]
+      category = match["category".freeze].strip.downcase.gsub(" ", "_").intern
+      if upper_bound = match["upper_bound".freeze]
+        data[category] << "0x#{lower_bound}..0x#{upper_bound}"
+      else
+        data[category] << "0x#{lower_bound}"
+      end
+    end
+    data
+  end
+
+  block_map = parse_unicode_data.("Blocks.txt")
+  line_break_map = parse_unicode_data.("LineBreak.txt")
+  script_map = parse_unicode_data.("Scripts.txt")
+  general_category_map = parse_unicode_data.("Scripts.txt", general_category_regex)
+  word_break_property_map = parse_unicode_data.("WordBreakProperty.txt")
+%>
+
+module Annex29
+  module WordSegmentation
+    %%{
+
+      machine segmenter;
+      alphtype int;
+
+      action word {
+        words << data[ts...te].pack("U*")
+      }
+
+      nd = (<%= general_category_map[:nd].join("|") %>);
+
+      block_half_and_full_forms = (<%= block_map[:halfwidth_and_fullwidth_forms].join("|") %>);
+
+      lb_complex_context = (<%= line_break_map[:sa].join("|") %>);
+
+      script_han = (<%= script_map[:han].join("|") %>);
+
+      script_hangul = (<%= script_map[:hangul].join("|") %>);
+
+      script_hiragana = (<%= script_map[:hiragana].join("|") %>);
+
+      <% word_break_property_map.each do |category, code_point_range| %>
+        <%= "wb_#{category}" %> = (<%= code_point_range.join("|") %>);
+      <% end %>
+
+      sticky = (wb_format | wb_extend | wb_zwj)*;
+
+      complex_context_ex = lb_complex_context sticky;
+
+      double_quote_ex = wb_double_quote sticky;
+
+      e_base_ex = wb_e_base sticky;
+
+      e_base_gaz_ex = wb_e_base_gaz sticky;
+
+      e_modifier_ex = wb_e_modifier sticky;
+
+      extend_num_let_ex = wb_extendnumlet sticky;
+
+      han_ex = script_han sticky;
+
+      hangul_ex = (script_hangul & (wb_aletter | wb_hebrew_letter)) sticky;
+
+      hebrew_letter_ex = wb_hebrew_letter sticky;
+
+      hebrew_or_aletter_ex = (wb_aletter | wb_hebrew_letter) sticky;
+
+      hiragana_ex = script_hiragana sticky;
+
+      katakana_ex = wb_katakana sticky;
+
+      mid_letter_ex = (wb_midletter | wb_midnumlet | wb_single_quote) sticky;
+
+      mid_numeric_ex = (wb_midnum | wb_midnumlet | wb_single_quote) sticky;
+
+      numeric_ex = (wb_numeric | (block_half_and_full_forms & nd)) sticky;
+
+      regional_indicator_ex = wb_regional_indicator sticky;
+
+      single_quote_ex = wb_single_quote sticky;
+
+      numeric =
+        extend_num_let_ex*
+        numeric_ex ((extend_num_let_ex* | mid_numeric_ex) numeric_ex)*
+        extend_num_let_ex*;
+
+      hangul = hangul_ex+;
+
+      katakana = katakana_ex+;
+
+      south_east_asian = complex_context_ex+;
+
+      ideographic = han_ex;
+
+      hiragana = hiragana_ex;
+
+      extend_num_let = extend_num_let_ex+;
+
+      inner_word =
+        (katakana_ex (extend_num_let_ex* katakana_ex)*) |
+        (
+          (hebrew_letter_ex (single_quote_ex | (double_quote_ex hebrew_letter_ex))) |
+          (numeric_ex ((extend_num_let_ex* | mid_numeric_ex) numeric_ex)*) |
+          (hebrew_or_aletter_ex ((extend_num_let_ex* | mid_letter_ex) hebrew_or_aletter_ex)*)
+        )+;
+
+      word =
+        extend_num_let_ex*
+        inner_word
+        (extend_num_let_ex+ inner_word)*
+        extend_num_let_ex*;
+
+      newline =
+        wb_cr wb_lf |
+        wb_lf |
+        wb_cr |
+        wb_newline;
+
+      flags = regional_indicator_ex regional_indicator_ex;
+
+      emoji =
+        e_base_ex e_modifier_ex? |
+        wb_zwj? e_base_gaz_ex e_modifier_ex? |
+        wb_zwj wb_glue_after_zwj sticky;
+
+      word_like =
+        numeric |
+        hangul |
+        katakana |
+        word |
+        south_east_asian |
+        ideographic |
+        hiragana |
+        extend_num_let |
+        flags |
+        emoji |
+        newline |
+        ^(newline) sticky |
+        sticky |
+        any;
+
+      main := |*
+        word_like => word;
+      *|;
+
+    }%%
+
+    %% write data;
+
+    class << self
+      def call(input)
+        data = input.each_char.map(&:ord)
+        eof = data.length
+        words = []
+
+        %% write init;
+        %% write exec;
+
+        words
+      end
+    end
+  end
+end
