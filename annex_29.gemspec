@@ -1,6 +1,6 @@
 Gem::Specification.new do |spec|
   spec.name = "annex_29"
-  spec.version = "0.1.0"
+  spec.version = "0.1.1"
   spec.date = "2016-10-18"
   spec.summary = "Unicode annex 29 compliant word segmentation"
   spec.authors = ["Simon Génier"]
