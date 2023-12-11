@@ -1,3 +1,7 @@
+# frozen_string_literal: true
+
+require 'pathname'
+
 module Annex29
   require("annex_29/word_segmentation")
 
