@@ -35,3 +35,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 - Add .ruby-version, Gemfile.lock, and GH test suite [#3](https://github.com/Shopify/annex-29/pull/3)
 - Set "Shopify developers" as gem owners; move to MIT license [#5](https://github.com/Shopify/annex-29/pull/5)
+- Bump rake gem from 11.3.0 to 13.1.0 [#6](https://github.com/Shopify/annex-29/pull/6)
