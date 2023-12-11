@@ -12,6 +12,6 @@ Gem::Specification.new do |spec|
   spec.homepage = "https://github.com/Shopify/annex-29"
   spec.license = "Apache-2.0"
 
-  spec.add_development_dependency("rake", "~> 11.3")
+  spec.add_development_dependency("rake", "~> 12.3")
   spec.add_development_dependency("rspec", "~> 3.5")
 end
