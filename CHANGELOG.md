@@ -31,6 +31,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 
 ---
 
+[0.2.1] - 2024-06-30
+- Fix mismatched indentation warnings in word_segmentation.rb file
+- Delete unused variables
+
 [0.2.0] - 2023-12-11
 
 - Add .ruby-version, Gemfile.lock, and GH test suite [#3](https://github.com/Shopify/annex-29/pull/3)
