@@ -1,0 +1,14 @@
+# deepsec security review of this repository: devx deepsec run (see devx deepsec help).
+# Context for the model: .security/deepsec/<project>.md.
+projects:
+  annex-29:
+    title: "annex-29 security review"
+    priority:
+      - lib/annex_29.rb
+      - lib/annex_29/word_segmentation.rl.erb
+      - Rakefile
+      - annex_29.gemspec
+      - .github/
+    ignore:
+      - "data/**"
+      - "lib/annex_29/word_segmentation.rb"
